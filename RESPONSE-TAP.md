@@ -30,9 +30,7 @@ signatures change. With no subscriber installed, the macro is a no-op
 ## How consumers use it
 
 Install a `tracing-subscriber` filtered to `hypersdk::http::response`
-at TRACE level. See `eris/src/oms/raw_response_log.rs` in the eris
-repo for the canonical setup (rolling daily JSON-Lines via
-`tracing-appender::non_blocking`).
+at TRACE level.
 
 ## Rebasing onto a new upstream version
 
@@ -64,13 +62,6 @@ cargo check
 git push origin response-tap --force-with-lease
 ```
 
-After pushing, in eris:
-
-```bash
-cd /root/build/eris
-cargo update -p hypersdk
-```
-
 ## When upstream adds a new `Action` variant
 
 `Action::kind()` is exhaustive — the compiler will fail with a
@@ -90,4 +81,4 @@ materialization will continue to exist somewhere).
 
 This patch is generic enough that it has a reasonable chance of being
 accepted upstream (`infinitefield/hypersdk`). If/when that happens, the
-fork can be retired and eris can revert to the crates.io version.
+fork can be retired and projects can revert to the crates.io version.
