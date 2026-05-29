@@ -1453,15 +1453,17 @@ pub async fn spot_markets(
     let spot_tokens: Vec<_> = data.tokens.iter().cloned().map(SpotToken::from).collect();
 
     for item in data.universe {
-        let (_, base) = spot_tokens
+        // Look up by the token's own `.index` field, not array position —
+        // HL spotMeta may return tokens whose `.index` is not contiguous with
+        // their position (e.g. TREAD at pos 462 has index 512), and universe
+        // items reference those non-contiguous indices.
+        let base = spot_tokens
             .iter()
-            .enumerate()
-            .find(|(index, _)| *index as u32 == item.tokens[0])
+            .find(|t| t.index == item.tokens[0])
             .context("base token index not found")?;
-        let (_, quote) = spot_tokens
+        let quote = spot_tokens
             .iter()
-            .enumerate()
-            .find(|(index, _)| *index as u32 == item.tokens[1])
+            .find(|t| t.index == item.tokens[1])
             .context("quote token index not found")?;
 
         markets.push(SpotMarket {
@@ -1561,10 +1563,13 @@ pub async fn perp_markets(
         .await
         .context("meta")?;
     let data: PerpTokens = resp.json().await?;
+    // Look up by `.index` field rather than array position — see comment in
+    // spot_markets() for why positional indexing is unsafe.
     let collateral = spot
         .tokens
-        .get(data.collateral_token)
-        .context("collateral token index out of bounds")?;
+        .iter()
+        .find(|t| t.index == data.collateral_token)
+        .context("collateral token not found")?;
     let collateral = SpotToken::from(collateral.clone());
     let dex_index = dex.as_ref().map(|dex| dex.index).unwrap_or_default();
 

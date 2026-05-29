@@ -2262,6 +2262,7 @@ impl Client {
         maybe_expires_after: Option<DateTime<Utc>>,
     ) -> impl Future<Output = Result<Response>> + Send + 'static {
         let action: Action = action.into();
+        let action_kind = action.kind();
         let res = action.sign_sync(
             signer,
             nonce,
@@ -2276,10 +2277,19 @@ impl Client {
 
         async move {
             let req = res?;
-            let res = http_client.post(url).json(&req).send().await?;
+            let res = http_client.post(url.clone()).json(&req).send().await?;
 
             let status = res.status();
             let text = res.text().await?;
+
+            tracing::trace!(
+                target: "hypersdk::http::response",
+                url = %url,
+                http_status = status.as_u16(),
+                nonce,
+                action = action_kind,
+                body = %text,
+            );
 
             if !status.is_success() {
                 return Err(anyhow!("HTTP {status} body={text}"));
@@ -2321,8 +2331,11 @@ impl Client {
         let mut url = self.base_url.clone();
         url.set_path("/exchange");
 
+        let action_kind = req.action.kind();
+        let nonce = req.nonce;
+
         let res = http_client
-            .post(url)
+            .post(url.clone())
             .timeout(Duration::from_secs(5))
             // .header(header::CONTENT_TYPE, "application/json")
             // .body(text)
@@ -2332,6 +2345,15 @@ impl Client {
 
         let status = res.status();
         let text = res.text().await?;
+
+        tracing::trace!(
+            target: "hypersdk::http::response",
+            url = %url,
+            http_status = status.as_u16(),
+            nonce,
+            action = action_kind,
+            body = %text,
+        );
 
         if !status.is_success() {
             return Err(anyhow!("HTTP {status} body={text}"));
